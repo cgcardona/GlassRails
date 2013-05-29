@@ -11,10 +11,20 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20130504212950) do
+ActiveRecord::Schema.define(:version => 20130529005516) do
+
+  create_table "google_oauths", :force => true do |t|
+    t.string   "access_token"
+    t.string   "refresh_token"
+    t.datetime "token_expires_at"
+    t.integer  "user_id"
+    t.datetime "created_at",       :null => false
+    t.datetime "updated_at",       :null => false
+  end
 
   create_table "users", :force => true do |t|
-    t.string   "name",                   :default => "", :null => false
+    t.string   "first_name",             :default => "", :null => false
+    t.string   "last_name",              :default => "", :null => false
     t.string   "email",                  :default => "", :null => false
     t.string   "encrypted_password",     :default => "", :null => false
     t.string   "reset_password_token"
@@ -25,9 +35,6 @@ ActiveRecord::Schema.define(:version => 20130504212950) do
     t.datetime "last_sign_in_at"
     t.string   "current_sign_in_ip"
     t.string   "last_sign_in_ip"
-    t.string   "access_token"
-    t.string   "refresh_token"
-    t.datetime "token_expires_at"
     t.datetime "created_at",                             :null => false
     t.datetime "updated_at",                             :null => false
   end

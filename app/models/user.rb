@@ -7,8 +7,10 @@ class User < ActiveRecord::Base
   devise :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable, :omniauthable, :omniauth_providers => [:google_oauth2]
 
+  has_many :google_oauths
+
   # Setup accessible (or protected) attributes for your model
-  attr_accessible :email, :password, :password_confirmation, :remember_me, :name
+  attr_accessible :email, :password, :password_confirmation, :remember_me, :first_name, :last_name
   # attr_accessible :title, :body
 
   def self.find_for_google_oauth2(access_token, signed_in_resource=nil)
@@ -19,13 +21,17 @@ class User < ActiveRecord::Base
     user = User.where(:email => data["email"]).first
 
     unless user
-        user = User.create(name: data["name"],
-             email: data["email"],
-             password: Devise.friendly_token[0,20]
-            )
-        user.access_token = access_token.credentials.token
-        user.refresh_token = access_token.credentials.refresh_token
-        user.token_expires_at = Time.at(access_token.credentials.expires_at)
+      user = User.create(
+        first_name: data["first_name"],
+        last_name: data["last_name"],
+        email: data["email"],
+        password: Devise.friendly_token[0,20]
+      )
+      user.google_oauths.create(
+        access_token:  access_token.credentials.token,
+        refresh_token: access_token.credentials.refresh_token,
+        token_expires_at: Time.at(access_token.credentials.expires_at)
+      )
     end
     user
   end
@@ -38,22 +44,23 @@ class User < ActiveRecord::Base
   end
 
   def self.get_current_token(user)
-    if (user.access_token.nil? || (user.token_expires_at.nil? || user.token_expires_at < Time.now))
+    google_oauth = user.google_oauths.first
+    if (google_oauth.access_token.nil? || (google_oauth.token_expires_at.nil? || google_oauth.token_expires_at < Time.now))
       data = {
         :client_id => ENV["GOOGLE_KEY"],
         :client_secret => ENV["GOOGLE_SECRET"],
-        :refresh_token => user.refresh_token,
+        :refresh_token => google_oauth.refresh_token,
         :grant_type => "refresh_token"
       }
       @response = ActiveSupport::JSON.decode(RestClient.post "https://accounts.google.com/o/oauth2/token", data)
       puts @response.to_json
       if @response["access_token"].present?
-        user.access_token = @response["access_token"]
-        user.token_expires_at = Time.at(Time.now.to_i + @response["expires_in"])
+        google_oauth.access_token = @response["access_token"]
+        google_oauth.token_expires_at = Time.at(Time.now.to_i + @response["expires_in"])
       end
-      user.save
+      google_oauth.save
     end
-    user.access_token
+    google_oauth.access_token
   end
 
 end
